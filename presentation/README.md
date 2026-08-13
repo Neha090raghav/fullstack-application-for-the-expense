@@ -2,18 +2,20 @@
 
 Internal 5-slide proposal for the airport technology / operations team.
 
-## Files
+## Files to use
 
-- `AI-Incident-Copilot-Airport-Middleware.pptx` — PowerPoint (16:9)
-- `AI-Incident-Copilot-Airport-Middleware.pdf` — PDF
-- `index.html` — interactive presenter (arrow keys, space, click)
+- `AI-Incident-Copilot-Airport-Middleware.pptx` — native PowerPoint (editable text and shapes)
+- `AI-Incident-Copilot-Airport-Middleware.pdf` — matching PDF
 
-## How to present
-
-Open the PPTX in PowerPoint or Google Slides, or open `index.html` in a browser.
-
-Browser shortcuts: `←` `→`, `Space`, `Home`, `End`.
+Open the PPTX in Microsoft PowerPoint or Google Slides. Every slide has **SOURCE INTEGRATE** in the top-right corner.
 
 ## Positioning
 
 Proposed human-in-the-loop concept. AIP Sentinel remains detection and alerting. The Copilot would analyze and recommend; engineers validate and act.
+
+To rebuild after edits:
+
+```bash
+python3 presentation/export/build_pptx.py
+soffice --headless --convert-to pdf --outdir presentation presentation/AI-Incident-Copilot-Airport-Middleware.pptx
+```
