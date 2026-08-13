@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Incident Copilot for Airport Middleware</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f7f9fc;
+      --surface-2: #eef3f8;
+      --line: #d9e2ec;
+      --line-strong: #c5d0dc;
+      --text: #1b2430;
+      --muted: #5b6775;
+      --subtle: #7a8694;
+      --blue: #1f5fbf;
+      --blue-dark: #163e7a;
+      --blue-soft: #e8f1fb;
+      --blue-mid: #c5daf3;
+      --navy: #1a3354;
+      --teal: #1a7a72;
+      --teal-soft: #e6f4f2;
+      --amber: #9a6700;
+      --amber-soft: #fff6e5;
+      --red: #b42318;
+      --red-soft: #fdeeee;
+      --shadow: 0 1px 2px rgba(26, 51, 84, 0.06), 0 8px 24px rgba(26, 51, 84, 0.05);
+      --radius: 14px;
+      --radius-sm: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #e8edf3;
+      color: var(--text);
+      font-family: Inter, "Liberation Sans", "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .stage {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 24px 72px;
+    }
+
+    .deck {
+      position: relative;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: top center;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 1920px;
+      height: 1080px;
+      background: var(--bg);
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+      padding: 48px 72px 40px;
+    }
+
+    .slide.active { display: flex; }
+
+    .export-mode .stage {
+      min-height: auto;
+      padding: 0;
+      background: #fff;
+    }
+
+    .export-mode .deck {
+      transform: none !important;
+      width: 1920px;
+      height: auto;
+    }
+
+    .export-mode .slide {
+      position: relative;
+      display: flex;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    .capture-mode {
+      background: #fff;
+    }
+
+    .capture-mode .stage {
+      padding: 0;
+      min-height: 1080px;
+      justify-content: flex-start;
+    }
+
+    .capture-mode .deck { transform: none !important; }
+    .capture-mode .ui { display: none !important; }
+
+    .top-rule {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--blue-dark) 0%, var(--blue) 55%, #5b8fd4 100%);
+    }
+
+    .kicker {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--subtle);
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
+    }
+
+    .kicker-left, .kicker-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--blue);
+    }
+
+    .slide-title {
+      font-size: 42px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--navy);
+      line-height: 1.15;
+      margin-bottom: 28px;
+    }
+
+    .slide-footer {
+      margin-top: auto;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--subtle);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .icon {
+      width: 28px; height: 28px;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .icon-lg { width: 36px; height: 36px; }
+
+    .node {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 8px;
+    }
+
+    .node .label {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--navy);
+      letter-spacing: -0.01em;
+    }
+
+    .node .sub {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .icon-wrap {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .iw-blue { background: var(--blue-soft); color: var(--blue-dark); }
+    .iw-navy { background: #e8eef6; color: var(--navy); }
+    .iw-teal { background: var(--teal-soft); color: var(--teal); }
+    .iw-amber { background: var(--amber-soft); color: var(--amber); }
+    .iw-red { background: var(--red-soft); color: var(--red); }
+    .iw-gray { background: var(--surface-2); color: var(--muted); }
+
+    .arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .arrow svg,
+    .arrow-down svg {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .arrow svg { width: 36px; height: 36px; }
+
+    .arrow-down { color: var(--blue); }
+    .arrow-down svg { width: 28px; height: 28px; }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .msg {
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.015em;
+      line-height: 1.4;
+    }
+
+    .msg-blue {
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+      border: 1px solid var(--blue-mid);
+    }
+
+    .msg-navy {
+      background: #f3f6fa;
+      color: var(--navy);
+      border: 1px solid var(--line);
+    }
+
+    /* ---------- Slide 1 ---------- */
+    .s1 { justify-content: center; padding: 56px 96px 48px; }
+    .s1-hero { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .s1-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 14px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 8px 16px; border-radius: 999px; margin-bottom: 36px;
+    }
+    .s1 h1 {
+      font-size: 64px; font-weight: 700; letter-spacing: -0.038em;
+      color: var(--navy); line-height: 1.08; max-width: 1400px;
+    }
+    .s1 .subtitle {
+      margin-top: 18px; font-size: 24px; font-weight: 500;
+      color: var(--muted); letter-spacing: -0.01em;
+    }
+    .s1-flow {
+      margin-top: 64px;
+      display: flex; align-items: stretch; justify-content: center; gap: 22px;
+    }
+    .s1-flow .node {
+      width: 280px; height: 168px; gap: 10px;
+    }
+    .s1-flow .node .label { font-size: 22px; }
+    .s1-note {
+      margin-top: 48px; color: var(--subtle); font-size: 16px; font-weight: 500;
+    }
+
+    /* ---------- Slide 2 ---------- */
+    .process {
+      display: flex; align-items: stretch; justify-content: space-between; gap: 10px;
+    }
+    .step {
+      flex: 1;
+      min-height: 168px;
+      padding: 18px 12px 16px;
+      position: relative;
+    }
+    .step-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--blue-soft); color: var(--blue-dark);
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .s2-grid { display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: stretch; }
+    .s2-main { display: flex; flex-direction: column; gap: 22px; }
+    .s2-side { display: flex; flex-direction: column; gap: 16px; }
+    .card {
+      background: #fff; border: 1px solid var(--line);
+      border-radius: var(--radius); box-shadow: var(--shadow);
+      padding: 22px;
+    }
+    .card h3 {
+      font-size: 15px; font-weight: 700; color: var(--navy);
+      letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px;
+    }
+    .card p { font-size: 16px; color: var(--muted); font-weight: 550; line-height: 1.45; }
+    .layer-tag {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 0; border-bottom: 1px solid var(--line);
+    }
+    .layer-tag:last-child { border-bottom: 0; padding-bottom: 0; }
+    .layer-tag:first-of-type { padding-top: 0; }
+    .plus-note {
+      font-size: 14px; color: var(--teal); font-weight: 600; margin-top: 4px;
+    }
+
+    /* ---------- Slide 3 ---------- */
+    .sources {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 14px;
+    }
+    .source {
+      padding: 16px 10px 14px; min-height: 118px;
+    }
+    .source .label { font-size: 14px; line-height: 1.25; }
+    .copilot-box {
+      margin: 8px 0 8px;
+      background: linear-gradient(180deg, #f5f9fe 0%, #eaf2fb 100%);
+      border: 1.5px solid var(--blue-mid);
+      border-radius: 18px;
+      padding: 22px 28px 24px;
+      text-align: center;
+    }
+    .copilot-box h2 {
+      font-size: 26px; font-weight: 700; color: var(--blue-dark);
+      letter-spacing: -0.02em; margin: 6px 0 18px;
+    }
+    .caps {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    }
+    .cap {
+      background: #fff; border: 1px solid var(--blue-mid);
+      border-radius: 12px; padding: 16px 10px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .cap .n {
+      font-size: 11px; font-weight: 700; color: var(--blue);
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .cap .t { font-size: 18px; font-weight: 700; color: var(--navy); }
+    .human-row {
+      display: grid; grid-template-columns: 1fr 56px 1fr; gap: 8px; align-items: stretch;
+    }
+    .human-box {
+      padding: 20px; min-height: 96px; flex-direction: row; gap: 16px;
+      justify-content: flex-start; text-align: left;
+    }
+    .human-box .label { font-size: 20px; }
+    .center-col { display: flex; flex-direction: column; align-items: center; }
+
+    /* ---------- Slide 4 ---------- */
+    .pipe {
+      display: flex; align-items: stretch; gap: 10px; margin-bottom: 22px;
+    }
+    .pipe .node { flex: 1; min-height: 122px; padding: 14px 8px; }
+    .pipe .node.error {
+      background: var(--red-soft); border-color: #f0c7c3;
+    }
+    .pipe .node.error .label { color: var(--red); }
+    .findings {
+      display: grid; grid-template-columns: 1.1fr 1.4fr 1.3fr 1.5fr; gap: 14px;
+      margin-bottom: 20px;
+    }
+    .finding { padding: 18px 18px 16px; min-height: 250px; }
+    .finding .htag {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .finding .body {
+      font-size: 16px; font-weight: 600; color: var(--navy); line-height: 1.4;
+    }
+    .finding ul {
+      margin-top: 8px; padding-left: 16px; color: var(--navy);
+      font-size: 15px; font-weight: 550; line-height: 1.45;
+    }
+    .compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    .compare .card { min-height: 118px; }
+    .compare h3 { color: var(--subtle); }
+    .compare .quote {
+      font-size: 18px; font-weight: 600; color: var(--navy);
+      letter-spacing: -0.015em; line-height: 1.35;
+    }
+
+    /* ---------- Slide 5 ---------- */
+    .phases {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+      margin-bottom: 24px;
+    }
+    .phase {
+      padding: 22px 20px 20px; min-height: 320px; position: relative;
+    }
+    .phase-num {
+      font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--blue); margin-bottom: 8px;
+    }
+    .phase h3 {
+      font-size: 26px; font-weight: 700; color: var(--navy);
+      letter-spacing: -0.02em; margin-bottom: 12px;
+    }
+    .phase p {
+      font-size: 16px; color: var(--muted); font-weight: 550; line-height: 1.4;
+    }
+    .phase-bar {
+      height: 4px; border-radius: 4px; margin-bottom: 16px;
+      background: var(--blue-mid);
+    }
+    .phase:nth-child(1) .phase-bar { width: 28%; background: var(--blue); }
+    .phase:nth-child(2) .phase-bar { width: 48%; background: var(--blue); }
+    .phase:nth-child(3) .phase-bar { width: 70%; background: var(--blue); }
+    .phase:nth-child(4) .phase-bar { width: 100%; background: var(--navy); }
+    .benefit {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 24px; padding: 22px 28px;
+    }
+    .thankyou {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 52px; font-weight: 700; letter-spacing: -0.035em;
+      color: var(--navy);
+    }
+    .ty-sub {
+      text-align: center; color: var(--subtle); font-size: 16px;
+      font-weight: 500; margin-top: 6px;
+    }
+
+    /* UI chrome */
+    .ui {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      display: flex; align-items: center; justify-content: center;
+      gap: 18px; padding: 16px;
+      background: linear-gradient(180deg, transparent, rgba(232,237,243,0.95));
+      font-family: Inter, sans-serif;
+      z-index: 10;
+    }
+    .ui button {
+      border: 1px solid var(--line-strong); background: #fff; color: var(--navy);
+      border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer;
+      font-size: 14px;
+    }
+    .dots { display: flex; gap: 8px; }
+    .dots span {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #c5d0dc; cursor: pointer;
+    }
+    .dots span.on { background: var(--blue); }
+
+    @page { size: 1920px 1080px; margin: 0; }
+
+    @media print {
+      html, body { background: #fff; }
+      .ui { display: none !important; }
+      .stage { padding: 0; }
+      .deck { transform: none !important; height: auto; }
+      .slide {
+        position: relative; display: flex !important;
+        page-break-after: always; break-after: page;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-bell" viewBox="0 0 24 24">
+        <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+        <path d="M10 19a2 2 0 0 0 4 0"/>
+      </symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24">
+        <path d="M12 3v4M12 17v4M4.6 6.6l2.8 2.8M16.6 16.6l2.8 2.8M3 12h4M17 12h4M4.6 17.4l2.8-2.8M16.6 7.4l2.8-2.8"/>
+        <circle cx="12" cy="12" r="2.2"/>
+      </symbol>
+      <symbol id="i-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="3.2"/>
+        <path d="M5 19c1.6-3.2 4-4.8 7-4.8S17.4 15.8 19 19"/>
+      </symbol>
+      <symbol id="i-mq" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="5" rx="1.2"/>
+        <rect x="3" y="10" width="18" height="5" rx="1.2"/>
+        <rect x="3" y="16" width="18" height="4" rx="1.2"/>
+      </symbol>
+      <symbol id="i-flow" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.4"/>
+        <rect x="14" y="14" width="7" height="7" rx="1.4"/>
+        <path d="M10 6.5h4.5A3.5 3.5 0 0 1 18 10v4"/>
+      </symbol>
+      <symbol id="i-log" viewBox="0 0 24 24">
+        <path d="M6 4h9l5 5v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/>
+        <path d="M14 4v6h6M8 13h8M8 17h5"/>
+      </symbol>
+      <symbol id="i-history" viewBox="0 0 24 24">
+        <path d="M3 12a9 9 0 1 0 3-6.7"/>
+        <path d="M3 5v4h4M12 7v6l4 2"/>
+      </symbol>
+      <symbol id="i-pattern" viewBox="0 0 24 24">
+        <circle cx="6" cy="7" r="2"/>
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="18" cy="7" r="2"/>
+        <circle cx="18" cy="17" r="2"/>
+        <path d="M8 8l2.4 2.6M14 12.8l2.2 2.6M14 11.2l2.2-2.4"/>
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M8 12.5l2.6 2.6L16 9.5"/>
+      </symbol>
+      <symbol id="i-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6.5"/>
+        <path d="M16 16l5 5"/>
+      </symbol>
+      <symbol id="i-link" viewBox="0 0 24 24">
+        <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1"/>
+        <path d="M14 11a5 5 0 0 0-7.1-.1l-2 2a5 5 0 0 0 7.1 7.1l1.1-1.1"/>
+      </symbol>
+      <symbol id="i-bulb" viewBox="0 0 24 24">
+        <path d="M9 18h6M10 21h4"/>
+        <path d="M8 14a6 6 0 1 1 8 0c-.8.8-1.3 1.7-1.5 3H9.5c-.2-1.3-.7-2.2-1.5-3z"/>
+      </symbol>
+      <symbol id="i-db" viewBox="0 0 24 24">
+        <ellipse cx="12" cy="6" rx="8" ry="3"/>
+        <path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/>
+        <path d="M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
+      </symbol>
+      <symbol id="i-msg" viewBox="0 0 24 24">
+        <path d="M4 6h16v10H8l-4 3V6z"/>
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24">
+        <path d="M12 3l8 3v6c0 5-3.4 8.2-8 9.5C7.4 20.2 4 17 4 12V6l8-3z"/>
+        <path d="M9 12l2 2 4-4"/>
+      </symbol>
+      <symbol id="i-plane" viewBox="0 0 24 24">
+        <path d="M3 12l18-8-6 18-3-7-9-3z"/>
+      </symbol>
+      <symbol id="i-book" viewBox="0 0 24 24">
+        <path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 0-2 2V5z"/>
+        <path d="M6 3v16"/>
+      </symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24">
+        <path d="M5 12h14M13 6l6 6-6 6"/>
+      </symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24">
+        <path d="M12 4v16M6 14l6 6 6-6"/>
+      </symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <path d="M12 3 3 19h18L12 3z"/>
+        <path d="M12 9v5M12 16.5v.5"/>
+      </symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M12 3.5v2.2M12 18.3v2.2M4.9 7.1l1.6 1.6M17.5 15.3l1.6 1.6M3.5 12h2.2M18.3 12h2.2M4.9 16.9l1.6-1.6M17.5 8.7l1.6-1.6"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <div class="stage">
+    <div class="deck" id="deck">
+
+      <!-- SLIDE 1 -->
+      <section class="slide s1" data-slide="1">
+        <div class="top-rule"></div>
+        <div class="s1-hero">
+          <div class="s1-badge">
+            <svg class="icon" style="width:16px;height:16px"><use href="#i-plane"/></svg>
+            Internal Proposal · Airport Technology
+          </div>
+          <h1>AI Incident Copilot<br>for Airport Middleware</h1>
+          <p class="subtitle">From Incident Detection to Intelligent Investigation &amp; Recommendation</p>
+
+          <div class="s1-flow">
+            <div class="node">
+              <div class="icon-wrap iw-amber"><svg class="icon icon-lg"><use href="#i-bell"/></svg></div>
+              <div class="label">Alert</div>
+              <div class="sub">Incident detected</div>
+            </div>
+            <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+            <div class="node" style="border-color:var(--blue-mid); background:#f7fbff;">
+              <div class="icon-wrap iw-blue"><svg class="icon icon-lg"><use href="#i-spark"/></svg></div>
+              <div class="label">AI Analysis</div>
+              <div class="sub">Correlate &amp; recommend</div>
+            </div>
+            <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+            <div class="node" style="border-color:#b7d8d4; background:#f7fcfb;">
+              <div class="icon-wrap iw-teal"><svg class="icon icon-lg"><use href="#i-user"/></svg></div>
+              <div class="label">Engineer</div>
+              <div class="sub">Validate &amp; act</div>
+            </div>
+          </div>
+          <p class="s1-note">Proposed concept · Human-in-the-loop · AI recommends, engineers decide</p>
+        </div>
+        <div class="slide-footer">
+          <span>Airport Middleware Operations</span>
+          <span>01 / 05</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 2 -->
+      <section class="slide" data-slide="2">
+        <div class="top-rule"></div>
+        <div class="kicker">
+          <div class="kicker-left"><span class="dot"></span> Current state</div>
+          <div class="kicker-right">Proposed intelligence layer</div>
+        </div>
+        <h2 class="slide-title">The Current Incident Investigation Process</h2>
+
+        <div class="s2-grid">
+          <div class="s2-main">
+            <div class="process">
+              <div class="node step">
+                <div class="step-num">1</div>
+                <div class="icon-wrap iw-amber"><svg class="icon"><use href="#i-bell"/></svg></div>
+                <div class="label">Incident Alert</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">2</div>
+                <div class="icon-wrap iw-teal"><svg class="icon"><use href="#i-user"/></svg></div>
+                <div class="label">Engineer Investigation</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">3</div>
+                <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-mq"/></svg></div>
+                <div class="label">Check MQ</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">4</div>
+                <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-flow"/></svg></div>
+                <div class="label">Check ACE</div>
+              </div>
+            </div>
+            <div class="center-col" style="margin:-8px 0;">
+              <div class="arrow-down"><svg><use href="#i-arrow-down"/></svg></div>
+            </div>
+            <div class="process">
+              <div class="node step">
+                <div class="step-num">5</div>
+                <div class="icon-wrap iw-gray"><svg class="icon"><use href="#i-log"/></svg></div>
+                <div class="label">Check Logs</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">6</div>
+                <div class="icon-wrap iw-gray"><svg class="icon"><use href="#i-history"/></svg></div>
+                <div class="label">Review Previous Incidents</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">7</div>
+                <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-pattern"/></svg></div>
+                <div class="label">Identify Pattern</div>
+              </div>
+              <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+              <div class="node step">
+                <div class="step-num">8</div>
+                <div class="icon-wrap iw-teal"><svg class="icon"><use href="#i-check"/></svg></div>
+                <div class="label">Decide What to Do</div>
+              </div>
+            </div>
+            <div class="msg msg-navy">
+              The required information is available, but engineers must manually connect the dots across multiple sources.
+            </div>
+          </div>
+
+          <aside class="s2-side">
+            <div class="card">
+              <h3>Where AIP Sentinel sits</h3>
+              <div class="layer-tag">
+                <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-shield"/></svg></div>
+                <div>
+                  <div class="label" style="font-weight:700;color:var(--navy);font-size:16px;">AIP Sentinel</div>
+                  <div class="sub" style="margin-top:4px;">Detection &amp; Alerting</div>
+                </div>
+              </div>
+              <div class="layer-tag">
+                <div class="icon-wrap iw-teal"><svg class="icon"><use href="#i-spark"/></svg></div>
+                <div>
+                  <div class="label" style="font-weight:700;color:var(--navy);font-size:16px;">AI Incident Copilot</div>
+                  <div class="sub" style="margin-top:4px;">Investigation intelligence</div>
+                  <div class="plus-note">Additional layer — not a replacement</div>
+                </div>
+              </div>
+            </div>
+            <div class="card" style="background:var(--surface);box-shadow:none;">
+              <h3>Design principle</h3>
+              <p>Keep existing alerting. Add a copilot that prepares the investigation for the engineer.</p>
+            </div>
+          </aside>
+        </div>
+
+        <div class="slide-footer">
+          <span>AI Incident Copilot · Internal Proposal</span>
+          <span>02 / 05</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 3 -->
+      <section class="slide" data-slide="3">
+        <div class="top-rule"></div>
+        <div class="kicker">
+          <div class="kicker-left"><span class="dot"></span> Proposed solution</div>
+          <div class="kicker-right">Human-in-the-loop</div>
+        </div>
+        <h2 class="slide-title">AI Incident Copilot</h2>
+
+        <div class="sources">
+          <div class="node source">
+            <div class="icon-wrap iw-amber"><svg class="icon"><use href="#i-bell"/></svg></div>
+            <div class="label">Incident Alert</div>
+          </div>
+          <div class="node source">
+            <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-mq"/></svg></div>
+            <div class="label">IBM MQ Data</div>
+          </div>
+          <div class="node source">
+            <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-flow"/></svg></div>
+            <div class="label">IBM ACE Logs</div>
+          </div>
+          <div class="node source">
+            <div class="icon-wrap iw-gray"><svg class="icon"><use href="#i-log"/></svg></div>
+            <div class="label">Application Logs</div>
+          </div>
+          <div class="node source">
+            <div class="icon-wrap iw-gray"><svg class="icon"><use href="#i-history"/></svg></div>
+            <div class="label">Historical Incidents</div>
+          </div>
+          <div class="node source">
+            <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-book"/></svg></div>
+            <div class="label">Knowledge / Runbooks</div>
+          </div>
+        </div>
+
+        <div class="center-col" style="margin:6px 0 2px;">
+          <div class="arrow-down"><svg><use href="#i-arrow-down"/></svg></div>
+        </div>
+
+        <div class="copilot-box">
+          <div class="pill" style="background:#fff;color:var(--blue-dark);border-color:var(--blue-mid);">Proposed intelligence layer</div>
+          <h2>AI Incident Copilot</h2>
+          <div class="caps">
+            <div class="cap">
+              <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-search"/></svg></div>
+              <div class="n">01</div>
+              <div class="t">Analyze</div>
+            </div>
+            <div class="cap">
+              <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-link"/></svg></div>
+              <div class="n">02</div>
+              <div class="t">Correlate</div>
+            </div>
+            <div class="cap">
+              <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-pattern"/></svg></div>
+              <div class="n">03</div>
+              <div class="t">Find Patterns</div>
+            </div>
+            <div class="cap">
+              <div class="icon-wrap iw-blue"><svg class="icon"><use href="#i-bulb"/></svg></div>
+              <div class="n">04</div>
+              <div class="t">Recommend</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="center-col" style="margin:2px 0 8px;">
+          <div class="arrow-down"><svg><use href="#i-arrow-down"/></svg></div>
+        </div>
+
+        <div class="human-row">
+          <div class="node human-box">
+            <div class="icon-wrap iw-teal"><svg class="icon icon-lg"><use href="#i-user"/></svg></div>
+            <div>
+              <div class="label">Engineer Validation</div>
+              <div class="sub">Review findings, confirm likely cause, choose the action</div>
+            </div>
+          </div>
+          <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+          <div class="node human-box">
+            <div class="icon-wrap iw-navy"><svg class="icon icon-lg"><use href="#i-gear"/></svg></div>
+            <div>
+              <div class="label">Action / Resolution</div>
+              <div class="sub">Engineer executes the change — not the AI</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="msg msg-blue" style="margin-top:16px;">
+          The Copilot does not replace the engineer. It reduces investigation effort and helps the engineer reach the right decision faster.
+        </div>
+
+        <div class="slide-footer">
+          <span>AI Incident Copilot · Internal Proposal</span>
+          <span>03 / 05</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 4 -->
+      <section class="slide" data-slide="4">
+        <div class="top-rule"></div>
+        <div class="kicker">
+          <div class="kicker-left"><span class="dot"></span> Illustrative example</div>
+          <div class="kicker-right">Not an autonomous resolver</div>
+        </div>
+        <h2 class="slide-title">Example: AODB Incident Investigation</h2>
+
+        <div class="pipe">
+          <div class="node">
+            <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-db"/></svg></div>
+            <div class="label">AODB</div>
+          </div>
+          <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+          <div class="node">
+            <div class="icon-wrap iw-gray"><svg class="icon"><use href="#i-msg"/></svg></div>
+            <div class="label">FLTU / RNUP Message</div>
+          </div>
+          <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+          <div class="node">
+            <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-mq"/></svg></div>
+            <div class="label">IBM MQ</div>
+          </div>
+          <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+          <div class="node">
+            <div class="icon-wrap iw-navy"><svg class="icon"><use href="#i-flow"/></svg></div>
+            <div class="label">IBM ACE</div>
+          </div>
+          <div class="arrow"><svg><use href="#i-arrow"/></svg></div>
+          <div class="node error">
+            <div class="icon-wrap iw-red"><svg class="icon"><use href="#i-alert"/></svg></div>
+            <div class="label">Processing Error</div>
+          </div>
+        </div>
+
+        <div class="findings">
+          <div class="card finding">
+            <div class="htag" style="color:var(--amber);">Incident</div>
+            <div class="body">AODB FLTU/RNUP processing failure</div>
+          </div>
+          <div class="card finding">
+            <div class="htag" style="color:var(--blue);">Correlation</div>
+            <div class="body">Message reached MQ successfully; failure occurred during downstream processing.</div>
+          </div>
+          <div class="card finding">
+            <div class="htag" style="color:var(--navy);">Pattern</div>
+            <div class="body">Similar incidents were previously associated with the ACE processing layer.</div>
+          </div>
+          <div class="card finding" style="background:#f7fbff;border-color:var(--blue-mid);">
+            <div class="htag" style="color:var(--blue-dark);">Recommendation</div>
+            <ul>
+              <li>Check ACE application logs</li>
+              <li>Validate message payload</li>
+              <li>Check affected integration flow</li>
+              <li>Compare with similar historical incidents</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="compare">
+          <div class="card">
+            <h3>AIP Sentinel</h3>
+            <div class="quote">“Something is wrong.”</div>
+            <p style="margin-top:8px;font-size:14px;color:var(--muted);font-weight:550;">Detection &amp; alerting — the starting point.</p>
+          </div>
+          <div class="card" style="border-color:var(--blue-mid);background:#f7fbff;">
+            <h3 style="color:var(--blue-dark);">AI Incident Copilot</h3>
+            <div class="quote">“What happened, what is related, what pattern do we see, and what should the engineer investigate next?”</div>
+          </div>
+        </div>
+
+        <div class="slide-footer">
+          <span>AI Incident Copilot · Internal Proposal</span>
+          <span>04 / 05</span>
+        </div>
+      </section>
+
+      <!-- SLIDE 5 -->
+      <section class="slide" data-slide="5">
+        <div class="top-rule"></div>
+        <div class="kicker">
+          <div class="kicker-left"><span class="dot"></span> Roadmap concept</div>
+          <div class="kicker-right">Engineer remains in control</div>
+        </div>
+        <h2 class="slide-title">Future Vision</h2>
+
+        <div class="phases">
+          <div class="card phase">
+            <div class="phase-bar"></div>
+            <div class="icon-wrap iw-blue" style="margin-bottom:14px;"><svg class="icon"><use href="#i-spark"/></svg></div>
+            <div class="phase-num">Phase 1</div>
+            <h3>Assist</h3>
+            <p>AI analyzes incidents and recommends next steps.</p>
+          </div>
+          <div class="card phase">
+            <div class="phase-bar"></div>
+            <div class="icon-wrap iw-blue" style="margin-bottom:14px;"><svg class="icon"><use href="#i-history"/></svg></div>
+            <div class="phase-num">Phase 2</div>
+            <h3>Learn</h3>
+            <p>Use engineer feedback and resolved incidents to improve recommendations.</p>
+          </div>
+          <div class="card phase">
+            <div class="phase-bar"></div>
+            <div class="icon-wrap iw-blue" style="margin-bottom:14px;"><svg class="icon"><use href="#i-pattern"/></svg></div>
+            <div class="phase-num">Phase 3</div>
+            <h3>Predict</h3>
+            <p>Identify recurring patterns and possible risks earlier.</p>
+          </div>
+          <div class="card phase">
+            <div class="phase-bar"></div>
+            <div class="icon-wrap iw-navy" style="margin-bottom:14px;"><svg class="icon"><use href="#i-shield"/></svg></div>
+            <div class="phase-num">Phase 4</div>
+            <h3>Controlled Automation</h3>
+            <p>Potential automation for approved, low-risk actions with proper validation.</p>
+          </div>
+        </div>
+
+        <div class="card benefit msg-blue" style="box-shadow:var(--shadow);">
+          <div>
+            <div style="font-size:12px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Key Benefit</div>
+            <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em;">
+              Reduce incident investigation time while keeping the engineer in control.
+            </div>
+          </div>
+          <div class="pill" style="background:#fff;color:var(--teal);border-color:#b7d8d4;white-space:nowrap;">Human-in-the-loop</div>
+        </div>
+
+        <div class="thankyou">Thank You</div>
+        <div class="ty-sub">Questions and discussion welcome</div>
+
+        <div class="slide-footer">
+          <span>AI Incident Copilot · Internal Proposal</span>
+          <span>05 / 05</span>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <nav class="ui" id="ui">
+    <button type="button" id="prev">Previous</button>
+    <div class="dots" id="dots"></div>
+    <button type="button" id="next">Next</button>
+    <span id="counter" style="color:#5b6775;font-weight:650;min-width:48px;">1 / 5</span>
+  </nav>
+
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const params = new URLSearchParams(location.search);
+    const exportMode = params.has("export");
+    const captureSlide = params.get("slide");
+    let index = 0;
+
+    function fit() {
+      if (exportMode || captureSlide) return;
+      const deck = document.getElementById("deck");
+      const scale = Math.min(
+        (window.innerWidth - 32) / 1920,
+        (window.innerHeight - 96) / 1080
+      );
+      deck.style.transform = "scale(" + Math.max(scale, 0.2) + ")";
+    }
+
+    function show(i) {
+      index = (i + slides.length) % slides.length;
+      slides.forEach((s, n) => s.classList.toggle("active", n === index));
+      document.querySelectorAll(".dots span").forEach((d, n) => d.classList.toggle("on", n === index));
+      document.getElementById("counter").textContent = (index + 1) + " / " + slides.length;
+    }
+
+    if (exportMode) {
+      document.body.classList.add("export-mode");
+      slides.forEach(s => s.classList.add("active"));
+      document.getElementById("ui").style.display = "none";
+    } else if (captureSlide) {
+      document.body.classList.add("capture-mode");
+      const n = Math.max(1, Math.min(5, parseInt(captureSlide, 10))) - 1;
+      slides.forEach((s, i) => s.classList.toggle("active", i === n));
+      document.getElementById("ui").style.display = "none";
+    } else {
+      const dots = document.getElementById("dots");
+      slides.forEach((_, n) => {
+        const s = document.createElement("span");
+        s.addEventListener("click", () => show(n));
+        dots.appendChild(s);
+      });
+      document.getElementById("prev").onclick = () => show(index - 1);
+      document.getElementById("next").onclick = () => show(index + 1);
+      document.addEventListener("keydown", (e) => {
+        if (["ArrowRight", "PageDown", " ", "Enter"].includes(e.key)) { e.preventDefault(); show(index + 1); }
+        if (["ArrowLeft", "PageUp", "Backspace"].includes(e.key)) { e.preventDefault(); show(index - 1); }
+        if (e.key === "Home") show(0);
+        if (e.key === "End") show(slides.length - 1);
+      });
+      show(0);
+      fit();
+      window.addEventListener("resize", fit);
+    }
+  </script>
+</body>
+</html>
